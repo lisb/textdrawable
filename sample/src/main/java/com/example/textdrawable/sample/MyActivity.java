@@ -21,7 +21,7 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.example.textdrawable;
+package com.example.textdrawable.sample;
 
 import android.app.Activity;
 import android.graphics.Color;
