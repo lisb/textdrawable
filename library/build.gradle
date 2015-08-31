@@ -1,4 +1,9 @@
 apply plugin: 'com.android.library'
+apply plugin: 'com.github.dcendents.android-maven'
+
+group = 'com.example.textdrawable'
+archivesBaseName = 'textdrawable'
+version = '1.0.0-SNAPSHOT'
 
 android {
     compileSdkVersion 16
@@ -8,4 +13,13 @@ android {
         minSdkVersion 8
         targetSdkVersion 16
     }
+}
+
+task androidSourcesJar(type: Jar) {
+    classifier = 'sources'
+    from android.sourceSets.main.java.source
+}
+
+artifacts {
+    archives androidSourcesJar
 }
