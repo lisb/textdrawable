@@ -1,25 +1,35 @@
 apply plugin: 'com.android.library'
-apply plugin: 'com.github.dcendents.android-maven'
-
-group = 'com.example.textdrawable'
-archivesBaseName = 'textdrawable'
-version = '1.0.0'
+apply plugin: 'maven-publish'
 
 android {
-    compileSdkVersion 16
-    buildToolsVersion "20.0.0"
+    compileSdkVersion 29
+    buildToolsVersion "29.0.3"
 
     defaultConfig {
         minSdkVersion 8
-        targetSdkVersion 16
+        targetSdkVersion 29
     }
 }
 
-task androidSourcesJar(type: Jar) {
-    classifier = 'sources'
-    from android.sourceSets.main.java.source
-}
-
-artifacts {
-    archives androidSourcesJar
+afterEvaluate {
+    publishing {
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = "https://maven.pkg.github.com/lisb/textdrawable"
+                credentials {
+                    username = gpr_user
+                    password = gpr_password
+                }
+            }
+        }
+        publications {
+            release(MavenPublication) {
+                from components.release
+                groupId = 'com.example.textdrawable'
+                artifactId = 'textdrawable'
+                version = '1.0.1'
+            }
+        }
+    }
 }

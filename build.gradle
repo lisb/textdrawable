@@ -1,16 +1,22 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 buildscript {
+    def localProps = new Properties()
+    localProps.load(rootProject.file('local.properties').newDataInputStream())
+    ext.gpr_user = localProps["gpr.user"]
+    ext.gpr_password = localProps["gpr.key"]
+
     repositories {
+        google()
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:1.3.0'
-        classpath 'com.github.dcendents:android-maven-gradle-plugin:1.3'
+        classpath 'com.android.tools.build:gradle:4.0.1'
     }
 }
 
 allprojects {
     repositories {
+        google()
         jcenter()
     }
 }
