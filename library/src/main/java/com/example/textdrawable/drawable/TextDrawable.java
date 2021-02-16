@@ -49,9 +49,8 @@ import android.util.TypedValue;
  *
  * A TextDrawable has an intrinsic size equal to that required to draw all
  * the text it has been supplied, when possible.  In cases where a {@link Path}
- * has been supplied, the caller must explicitly call
- * {@link #setBounds(android.graphics.Rect) setBounds()} to provide the Drawable
- * size based on the Path constraints.
+ * has been supplied, You can specify intrinsicWidth and intrinsicHeight by
+ * {@link #setIntrinsicWidthExplicitly(Integer)} and {@link #setIntrinsicHeightExplicitly(Integer)} .
  */
 public class TextDrawable extends Drawable {
 
@@ -72,10 +71,13 @@ public class TextDrawable extends Drawable {
     private Path mTextPath;
     /* Stateful text color list */
     private ColorStateList mTextColors;
-    /* Container for the bounds to be reported to widgets */
-    private Rect mTextBounds;
     /* Text string to draw */
     private CharSequence mText = "";
+
+    private Integer measuredIntrinsicWidth;
+    private Integer measuredIntrinsicHeight;
+    private Integer specifiedIntrinsicWidth;
+    private Integer specifiedIntrinsicHeight;
 
     /* Attribute lists to pull default values from the current theme */
     private static final int[] themeAttributes = {
@@ -93,8 +95,6 @@ public class TextDrawable extends Drawable {
         super();
         //Used to load and scale resource items
         mResources = context.getResources();
-        //Definition of this drawables size
-        mTextBounds = new Rect();
         //Paint to use for the text
         mTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
         mTextPaint.density = mResources.getDisplayMetrics().density;
@@ -169,7 +169,7 @@ public class TextDrawable extends Drawable {
 
         mText = text;
 
-        measureContent();
+        clearMeasurement();
     }
 
     /**
@@ -212,7 +212,7 @@ public class TextDrawable extends Drawable {
         if (size != mTextPaint.getTextSize()) {
             mTextPaint.setTextSize(size);
 
-            measureContent();
+            clearMeasurement();
         }
     }
 
@@ -230,7 +230,7 @@ public class TextDrawable extends Drawable {
     public void setTextScaleX(float size) {
         if (size != mTextPaint.getTextScaleX()) {
             mTextPaint.setTextScaleX(size);
-            measureContent();
+            clearMeasurement();
         }
     }
 
@@ -254,7 +254,7 @@ public class TextDrawable extends Drawable {
     public void setTextAlign(Layout.Alignment align) {
         if (mTextAlignment != align) {
             mTextAlignment = align;
-            measureContent();
+            clearMeasurement();
         }
     }
 
@@ -269,7 +269,7 @@ public class TextDrawable extends Drawable {
         if (mTextPaint.getTypeface() != tf) {
             mTextPaint.setTypeface(tf);
 
-            measureContent();
+            clearMeasurement();
         }
     }
 
@@ -329,39 +329,32 @@ public class TextDrawable extends Drawable {
     /**
      * Optional Path object on which to draw the text.  If this is set,
      * TextDrawable cannot properly measure the bounds this drawable will need.
-     * You must call {@link #setBounds(int, int, int, int) setBounds()} before
-     * applying this TextDrawable to any View.
+     * You can specify intrinsicWidth and intrinsicHeight by setIntrinsicWidthExplicitly and setIntrinsicHeightExplicitly.
      *
      * Calling this method with <code>null</code> will remove any Path currently attached.
      */
     public void setTextPath(Path path) {
         if (mTextPath != path) {
             mTextPath = path;
-            measureContent();
+            clearMeasurement();
         }
     }
 
-    /**
-     * Internal method to take measurements of the current contents and apply
-     * the correct bounds when possible.
-     */
-    private void measureContent() {
-        //If drawing to a path, we cannot measure intrinsic bounds
-        //We must resly on setBounds being called externally
-        if (mTextPath != null) {
-            //Clear any previous measurement
-            mTextLayout = null;
-            mTextBounds.setEmpty();
-        } else {
-            //Measure text bounds
+    private void clearMeasurement() {
+        mTextLayout = null;
+        measuredIntrinsicWidth = null;
+        measuredIntrinsicHeight = null;
+        //We may need to be redrawn
+        invalidateSelf();
+    }
+
+    private StaticLayout getTextLayout() {
+        if (mTextLayout == null) {
             double desired = Math.ceil( Layout.getDesiredWidth(mText, mTextPaint) );
             mTextLayout = new StaticLayout(mText, mTextPaint, (int)desired,
                     mTextAlignment, 1.0f, 0.0f, false);
-            mTextBounds.set(0, 0, mTextLayout.getWidth(), mTextLayout.getHeight());
         }
-
-        //We may need to be redrawn
-        invalidateSelf();
+        return mTextLayout;
     }
 
     /**
@@ -375,12 +368,6 @@ public class TextDrawable extends Drawable {
         }
 
         return false;
-    }
-
-    @Override
-    protected void onBoundsChange(Rect bounds) {
-        //Update the internal bounds in response to any external requests
-        mTextBounds.set(bounds);
     }
 
     @Override
@@ -398,23 +385,39 @@ public class TextDrawable extends Drawable {
         return updateTextColors(state);
     }
 
+    public void setIntrinsicHeightExplicitly(Integer height) {
+        this.specifiedIntrinsicHeight = height;
+    }
+
     @Override
     public int getIntrinsicHeight() {
-        //Return the vertical bounds measured, or -1 if none
-        if (mTextBounds.isEmpty()) {
+        if (specifiedIntrinsicHeight != null) {
+            return specifiedIntrinsicHeight;
+        } else if (mTextPath != null) {
             return -1;
         } else {
-            return (mTextBounds.bottom - mTextBounds.top);
+            if (measuredIntrinsicHeight == null) {
+                measuredIntrinsicHeight = getTextLayout().getHeight();
+            }
+            return measuredIntrinsicHeight;
         }
+    }
+
+    public void setIntrinsicWidthExplicitly(Integer width) {
+        this.specifiedIntrinsicWidth = width;
     }
 
     @Override
     public int getIntrinsicWidth() {
-        //Return the horizontal bounds measured, or -1 if none
-        if (mTextBounds.isEmpty()) {
+        if (specifiedIntrinsicWidth != null) {
+            return specifiedIntrinsicWidth;
+        } else if (mTextPath != null) {
             return -1;
         } else {
-            return (mTextBounds.right - mTextBounds.left);
+            if (measuredIntrinsicWidth == null) {
+                measuredIntrinsicWidth = getTextLayout().getWidth();
+            }
+            return measuredIntrinsicWidth;
         }
     }
 
@@ -425,7 +428,7 @@ public class TextDrawable extends Drawable {
         canvas.translate(bounds.left, bounds.top);
         if (mTextPath == null) {
             //Allow the layout to draw the text
-            mTextLayout.draw(canvas);
+            getTextLayout().draw(canvas);
         } else {
             //Draw directly on the canvas using the supplied path
             canvas.drawTextOnPath(mText.toString(), mTextPath, 0, 0, mTextPaint);
